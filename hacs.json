@@ -1,0 +1,9 @@
+{
+  "name": "Meteogram Card",
+  "content_in_root": false,
+  "filename": "meteogram-card.js",
+  "homeassistant": "2024.1.0",
+  "render_readme": true,
+  "documentation": "https://github.com/ryssel/yr-meteogram-ts/blob/main/ha-card/README.md",
+  "requirements": []
+}

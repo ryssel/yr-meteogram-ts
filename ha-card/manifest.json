@@ -1,0 +1,40 @@
+{
+  "version": "0.1.0",
+  "type": "module",
+  "name": "Meteogram Card",
+  "description": "Scrollable weather meteogram using MET Norway Locationforecast API",
+  "codeowners": ["@ryssel"],
+  "config": {
+    "schema": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Latitude for forecast (defaults to Home Assistant config)",
+          "default": null
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Longitude for forecast (defaults to Home Assistant config)",
+          "default": null
+        },
+        "days": {
+          "type": "integer",
+          "description": "Number of days of forecast to show",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 14
+        },
+        "proxy_url": {
+          "type": "string",
+          "description": "Optional: proxy endpoint URL that adds MET User-Agent header. If omitted, calls MET API directly (may fail due to CORS)",
+          "default": null
+        }
+      }
+    }
+  }
+}

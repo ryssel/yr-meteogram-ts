@@ -37,6 +37,12 @@ environment variables instead of a `.env` file).
 Open the printed local URL. Enter a location's latitude/longitude (or click
 "Use my location") and pick how many days of forecast to show.
 
+## Home Assistant Integration
+
+Want to use the meteogram as a custom card in Home Assistant? See [ha-card/README.md](ha-card/README.md) for installation and setup.
+
+The card integrates seamlessly into your Home Assistant dashboard and works great on mobile via the Companion app.
+
 ## How the chart works
 
 - `src/forecast.ts` fetches the forecast and flattens MET's timeseries into a
