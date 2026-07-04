@@ -5,6 +5,8 @@ weather meteogram (temperature, precipitation, wind speed + gusts, weather
 icons) using MET Norway's free Locationforecast API — in the style of yr.no's
 forecast graph.
 
+![Meteogram card](images/meteogram.png)
+
 ## Features
 
 - 📊 Scrollable chart: temperature line, precipitation bars, wind speed + gusts
