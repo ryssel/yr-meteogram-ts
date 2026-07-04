@@ -12,6 +12,7 @@ interface Layout {
   precipBandHeight: number;
   panePadTop: number;
   panePadBottom: number;
+  arrowRowHeight: number;
   axisHeight: number;
 }
 
@@ -28,6 +29,7 @@ const LAYOUT: Layout = {
   precipBandHeight: 38,
   panePadTop: 8,
   panePadBottom: 6,
+  arrowRowHeight: 22,
   axisHeight: 24,
 };
 
@@ -104,13 +106,29 @@ function smoothPath(pts: { x: number; y: number }[]): string {
   return path;
 }
 
+/**
+ * A small wind-direction arrow centred at (x, y). `fromDir` is the direction the
+ * wind blows FROM (MET convention); the arrow points where the wind is going
+ * (fromDir + 180). Default glyph points up (north); SVG rotate is clockwise, so
+ * rotating by the compass bearing aims it correctly.
+ */
+function windArrow(fromDir: number, x: number, y: number): string {
+  const flow = (fromDir + 180) % 360;
+  return (
+    `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${flow.toFixed(0)})" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
+    `<line x1="0" y1="-6" x2="0" y2="6" />` +
+    `<path d="M-3,-3 L0,-6 L3,-3" />` +
+    `</g>`
+  );
+}
+
 export function renderMeteogram(container: HTMLElement, points: ForecastPoint[]): void {
   if (points.length === 0) {
     container.innerHTML = `<p class="status">No forecast data available.</p>`;
     return;
   }
 
-  const { pxPerHour, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, axisHeight } =
+  const { pxPerHour, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, arrowRowHeight, axisHeight } =
     LAYOUT;
   const headerHeight = dayLabelHeight + iconRowHeight;
 
@@ -158,7 +176,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const windPaneHeight = panePadTop + windPlot + panePadBottom;
   const yWind = (v: number) => windBottom - (v / maxWind) * (windBottom - windTop);
 
-  const totalHeight = headerHeight + tempPaneHeight + windPaneHeight + axisHeight;
+  const totalHeight = headerHeight + tempPaneHeight + windPaneHeight + arrowRowHeight + axisHeight;
 
   // --- build line paths (smoothed with monotone cubic interpolation) ---
   const tempPts: { x: number; y: number }[] = [];
@@ -241,6 +259,18 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     lastIconX = x;
   }
 
+  // --- wind-direction arrows (row below the wind pane, same cadence as icons) ---
+  const arrows: string[] = [];
+  const arrowY = headerHeight + tempPaneHeight + windPaneHeight + arrowRowHeight / 2;
+  let lastArrowX = -Infinity;
+  for (const p of points) {
+    if (p.windDirection === null) continue;
+    const x = xScale(p.time.getTime());
+    if (x - lastArrowX < minIconSpacing) continue;
+    arrows.push(windArrow(p.windDirection, x, arrowY));
+    lastArrowX = x;
+  }
+
   // --- y-axis: gridlines scroll with the chart; the value labels live in a
   // separate overlay so they stay frozen on the left while you scroll ---
   const gridLines: string[] = [];
@@ -272,6 +302,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
       <path d="${tempPath}" fill="none" stroke="var(--temp)" stroke-width="2.5" />
       <path d="${windPath}" fill="none" stroke="var(--wind)" stroke-width="2" />
       <path d="${gustPath}" fill="none" stroke="var(--wind)" stroke-width="1.5" stroke-dasharray="5,4" />
+      ${arrows.join("")}
       ${hourLabels.join("")}
       <line x1="0" y1="${dayLabelHeight}" x2="${width}" y2="${dayLabelHeight}" stroke="#eee" stroke-width="1" />
       <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${width}" y2="${headerHeight + tempPaneHeight}" stroke="#ccc" stroke-width="1" />

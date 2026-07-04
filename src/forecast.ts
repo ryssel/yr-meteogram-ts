@@ -42,6 +42,8 @@ export interface ForecastPoint {
   precipitation: number | null;
   windSpeed: number | null;
   windGust: number | null;
+  /** Direction the wind blows FROM, in degrees (0 = north, 90 = east). */
+  windDirection: number | null;
   symbol: string | null;
 }
 
@@ -71,6 +73,7 @@ export function toForecastPoints(response: MetResponse, maxDays: number): Foreca
         precipitation: hourly.details.precipitation_amount ?? null,
         windSpeed: instant.wind_speed ?? null,
         windGust: instant.wind_speed_of_gust ?? null,
+        windDirection: instant.wind_from_direction ?? null,
         symbol: hourly.summary.symbol_code,
       });
     } else if (sixHourly) {
@@ -81,6 +84,7 @@ export function toForecastPoints(response: MetResponse, maxDays: number): Foreca
         precipitation: sixHourly.details.precipitation_amount ?? null,
         windSpeed: instant.wind_speed ?? null,
         windGust: instant.wind_speed_of_gust ?? null,
+        windDirection: instant.wind_from_direction ?? null,
         symbol: sixHourly.summary.symbol_code,
       });
     }
