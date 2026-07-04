@@ -1,5 +1,5 @@
 {
-  "version": "0.2.9",
+  "version": "0.2.10",
   "type": "module",
   "name": "Meteogram Card",
   "description": "Scrollable weather meteogram using MET Norway Locationforecast API",
@@ -26,7 +26,7 @@
           "type": "integer",
           "description": "Optional cap on forecast days to show. Omit to show MET's full available range (~10 days: hourly then 6-hourly)",
           "minimum": 1,
-          "maximum": 14
+          "maximum": 10
         },
         "proxy_url": {
           "type": "string",

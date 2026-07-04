@@ -162,6 +162,10 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
 
   // --- temperature scale (range fits the data, so the line fills the pane) ---
   const temps = points.map((p) => p.temperature).filter((v): v is number => v !== null);
+  if (temps.length === 0) {
+    container.innerHTML = `<p class="status">No temperature data available.</p>`;
+    return;
+  }
   // Enforce a minimum span so a nearly-flat day isn't zoomed into noise.
   // A higher target favours 2° gridlines for typical day-to-day ranges.
   const tempStep = niceStep(Math.max(6, Math.max(...temps) - Math.min(...temps)), 8);

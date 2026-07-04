@@ -31,6 +31,8 @@ class MeteogramCard extends HTMLElement {
   private _statusEl?: HTMLParagraphElement;
   private _lastKey?: string;
   private _refreshTimer?: number;
+  private _reqSeq = 0;
+  private _cardHeight?: number;
 
   constructor() {
     super();
@@ -117,6 +119,10 @@ class MeteogramCard extends HTMLElement {
       return;
     }
 
+    // Token so a slow fetch that's been superseded (config change or refresh
+    // overlap) doesn't clobber a newer render.
+    const reqId = ++this._reqSeq;
+
     try {
       // proxy_url is the base that maps to api.met.no; append the MET path.
       const endpoint = `${proxyBase}/weatherapi/locationforecast/2.0/complete?lat=${latitude}&lon=${longitude}`;
@@ -125,6 +131,7 @@ class MeteogramCard extends HTMLElement {
       if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const data = (await response.json()) as MetResponse;
+      if (reqId !== this._reqSeq) return; // a newer request started; drop this one
 
       // Show everything MET returns — hourly for the first ~2 days, then
       // 6-hourly further out. The available data determines the period.
@@ -142,7 +149,11 @@ class MeteogramCard extends HTMLElement {
       renderMeteogram(this._container, points);
       const scroller = this._container.querySelector<HTMLElement>(".meteogram-scroll");
       if (scroller) scroller.scrollLeft = prevScroll;
+      // Cache the rendered height so getCardSize() reflects the real card size.
+      const h = Number(this._container.querySelector("svg")?.getAttribute("height"));
+      if (h) this._cardHeight = h;
     } catch (error) {
+      if (reqId !== this._reqSeq) return; // superseded; don't overwrite newer state
       this._container.innerHTML = "";
       const msg = document.createElement("p");
       msg.className = "status";
@@ -202,7 +213,9 @@ class MeteogramCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 3; // Approximate card height in units
+    // HA treats one unit as ~50px. Derive from the rendered height (+ padding)
+    // when we have it, otherwise a reasonable default.
+    return this._cardHeight ? Math.ceil((this._cardHeight + 32) / 50) : 4;
   }
 }
 
