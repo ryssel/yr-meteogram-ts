@@ -95,6 +95,21 @@ h1 {
 .meteogram-scroll {
   overflow-x: auto;
   padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color, #ccc) transparent;
+}
+
+.meteogram-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.meteogram-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-color, #ccc);
+  border-radius: 4px;
+}
+
+.meteogram-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .meteogram-scroll svg {

@@ -123,7 +123,7 @@ function smoothPath(pts: { x: number; y: number }[]): string {
 function windArrow(fromDir: number, x: number, y: number): string {
   const flow = (fromDir + 180) % 360;
   return (
-    `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${flow.toFixed(0)})" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
+    `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${flow.toFixed(0)})" stroke="var(--secondary-text-color, #555)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
     `<line x1="0" y1="-6" x2="0" y2="6" />` +
     `<path d="M-3,-3 L0,-6 L3,-3" />` +
     `</g>`
@@ -232,13 +232,13 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   while (cursor.getTime() < lastTime) {
     const x = xScale(cursor.getTime());
     dayLines.push(
-      `<line x1="${x.toFixed(1)}" y1="${headerHeight}" x2="${x.toFixed(1)}" y2="${totalHeight - axisHeight}" stroke="#333" stroke-width="1" />`
+      `<line x1="${x.toFixed(1)}" y1="${headerHeight}" x2="${x.toFixed(1)}" y2="${totalHeight - axisHeight}" stroke="var(--primary-text-color, #333)" stroke-width="1" />`
     );
     const nextMidnight = new Date(cursor);
     nextMidnight.setDate(cursor.getDate() + 1);
     const labelCenter = xScale((cursor.getTime() + Math.min(nextMidnight.getTime(), lastTime)) / 2);
     dayLabels.push(
-      `<text x="${labelCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="#222">${dayLabelFmt.format(cursor)}</text>`
+      `<text x="${labelCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--primary-text-color, #222)">${dayLabelFmt.format(cursor)}</text>`
     );
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -246,7 +246,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const firstMidnight = new Date(firstTime).setHours(24, 0, 0, 0);
   const firstDayCenter = xScale((firstTime + Math.min(firstMidnight, lastTime)) / 2);
   dayLabels.unshift(
-    `<text x="${firstDayCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="#222">${dayLabelFmt.format(new Date(firstTime))}</text>`
+    `<text x="${firstDayCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--primary-text-color, #222)">${dayLabelFmt.format(new Date(firstTime))}</text>`
   );
 
   // --- hour tick labels ---
@@ -262,7 +262,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     if (show) {
       const x = xScale(t);
       hourLabels.push(
-        `<text x="${x.toFixed(1)}" y="${totalHeight - 6}" text-anchor="middle" font-size="10" fill="#666">${hourLabelFmt.format(hourCursor)}</text>`
+        `<text x="${x.toFixed(1)}" y="${totalHeight - 6}" text-anchor="middle" font-size="10" fill="var(--secondary-text-color, #666)">${hourLabelFmt.format(hourCursor)}</text>`
       );
     }
     hourCursor = new Date(hourCursor.getTime() + 3600_000);
@@ -301,12 +301,12 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const leftLabels: string[] = [];
   for (let t = minTemp; t <= maxTemp; t += tempStep) {
     const y = yTemp(t).toFixed(1);
-    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="#eee" stroke-width="1" />`);
+    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #eee)" stroke-width="1" />`);
     leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--temp)">${t}°</text>`);
   }
   for (let w = 0; w <= maxWind; w += windStep) {
     const y = yWind(w).toFixed(1);
-    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="#f2f2f2" stroke-width="1" />`);
+    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #f2f2f2)" stroke-width="1" />`);
     leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--wind)">${w}</text>`);
   }
   // Precip (mm) labels — frozen on the left only.
@@ -317,7 +317,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
 
   const svg = `
     <svg width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
-      <rect x="0" y="0" width="${width}" height="${totalHeight}" fill="#fff" />
+      <rect x="0" y="0" width="${width}" height="${totalHeight}" fill="var(--ha-card-background, var(--card-background-color, #fff))" />
       ${gridLines.join("")}
       ${precipBars}
       ${dayLines.join("")}
@@ -328,8 +328,8 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
       <path d="${gustPath}" fill="none" stroke="var(--wind)" stroke-width="1.5" stroke-dasharray="5,4" />
       ${arrows.join("")}
       ${hourLabels.join("")}
-      <line x1="0" y1="${dayLabelHeight}" x2="${width}" y2="${dayLabelHeight}" stroke="#eee" stroke-width="1" />
-      <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${width}" y2="${headerHeight + tempPaneHeight}" stroke="#ccc" stroke-width="1" />
+      <line x1="0" y1="${dayLabelHeight}" x2="${width}" y2="${dayLabelHeight}" stroke="var(--divider-color, #eee)" stroke-width="1" />
+      <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${width}" y2="${headerHeight + tempPaneHeight}" stroke="var(--divider-color, #ccc)" stroke-width="1" />
     </svg>
   `;
 
@@ -341,9 +341,9 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const axisTop = headerHeight; // leave the icon/day-label header scrolling
   const axisOverlay = `
     <svg class="meteogram-axis" width="${axisW}" height="${totalHeight}" viewBox="0 0 ${axisW} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" style="position:absolute;top:0;left:0;pointer-events:none;">
-      <rect x="0" y="${axisTop}" width="${axisW}" height="${totalHeight - axisTop}" fill="#fff" />
-      <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${axisW}" y2="${headerHeight + tempPaneHeight}" stroke="#ccc" stroke-width="1" />
-      <line x1="${axisW - 0.5}" y1="${headerHeight}" x2="${axisW - 0.5}" y2="${totalHeight - axisHeight}" stroke="#e5e5e5" stroke-width="1" />
+      <rect x="0" y="${axisTop}" width="${axisW}" height="${totalHeight - axisTop}" fill="var(--ha-card-background, var(--card-background-color, #fff))" />
+      <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${axisW}" y2="${headerHeight + tempPaneHeight}" stroke="var(--divider-color, #ccc)" stroke-width="1" />
+      <line x1="${axisW - 0.5}" y1="${headerHeight}" x2="${axisW - 0.5}" y2="${totalHeight - axisHeight}" stroke="var(--divider-color, #e5e5e5)" stroke-width="1" />
       ${leftLabels.join("")}
     </svg>
   `;

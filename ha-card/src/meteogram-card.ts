@@ -173,6 +173,19 @@ class MeteogramCard extends HTMLElement {
          stays put so the frozen left axis overlay doesn't scroll away. */
       .meteogram-scroll {
         overflow-x: auto;
+        /* Match HA's themed scrollbars (dark thumb in dark mode). */
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb-color, #ccc) transparent;
+      }
+      .meteogram-scroll::-webkit-scrollbar {
+        height: 8px;
+      }
+      .meteogram-scroll::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-color, #ccc);
+        border-radius: 4px;
+      }
+      .meteogram-scroll::-webkit-scrollbar-track {
+        background: transparent;
       }
 
       .status {
@@ -193,7 +206,11 @@ class MeteogramCard extends HTMLElement {
   }
 }
 
-customElements.define("meteogram-card", MeteogramCard);
+// Guard against double-registration — a module can get loaded more than once
+// (e.g. after a HACS update), and a second define() would throw.
+if (!customElements.get("meteogram-card")) {
+  customElements.define("meteogram-card", MeteogramCard);
+}
 
 // Required for HA to recognize this
 declare global {
