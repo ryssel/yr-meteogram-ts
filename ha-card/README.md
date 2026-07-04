@@ -11,7 +11,7 @@ forecast graph.
 
 - 📊 Scrollable chart: temperature line, precipitation bars, wind speed + gusts
 - 🌍 Free MET Norway weather data (CC BY 4.0)
-- 🕐 Hourly resolution across MET's full hourly window (~2 days)
+- 🕐 Shows MET's full available range (~10 days): hourly for ~2 days, then 6-hourly
 - 📱 Mobile-friendly, respects Home Assistant themes
 - 🎨 Original hand-drawn weather icons keyed off MET's full `symbol_code`
 
@@ -128,7 +128,7 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 # latitude/longitude default to your Home Assistant location if omitted:
 # latitude: 59.9139
 # longitude: 10.7522
-# days: 3   # optional cap; omit to show MET's full hourly window (~2 days)
+# days: 3   # optional cap; omit to show MET's full available range (~10 days)
 ```
 
 ## Configuration
@@ -138,7 +138,7 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 | `proxy_url` | string | — | **Required.** Base path of your MET proxy — use the relative `/met` (same-origin, recommended). The card appends `/weatherapi/locationforecast/2.0/complete?lat=…&lon=…`. An absolute `https://…/met` also works but is CORS/mixed-content prone. |
 | `latitude` | number | HA config latitude | Forecast location latitude |
 | `longitude` | number | HA config longitude | Forecast location longitude |
-| `days` | integer | full hourly window | Optional cap (1–14) on days shown. Omit to show all hourly points MET provides (~2 days). |
+| `days` | integer | full range | Optional cap (1–14) on days shown. Omit to show MET's full available range (~10 days). |
 
 ## What it renders
 
@@ -147,9 +147,11 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 - **Day separators**: vertical lines at midnight
 - **Icon row**: weather icons from MET's `symbol_code`
 
-The card shows **hourly** points across MET's full hourly window (currently
-~2 days / ~50 hours); MET's coarser 6-hourly data beyond that is intentionally
-not shown.
+By default the card shows MET's **full available range** (~10 days): the
+resolution degrades the way MET's data does — hourly (`next_1_hours`) for the
+first ~2 days, then 6-hourly (`next_6_hours`) further out (wider precip bars and
+sparser icons reflect the coarser steps). Set `days` to cap how far ahead it
+goes.
 
 ## Troubleshooting
 

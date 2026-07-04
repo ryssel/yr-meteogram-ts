@@ -2,7 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 
 // Reuse the main app's fetch/normalize logic and renderer — single source of
 // truth, no duplicated parsing here.
-import { toForecastPoints, type ForecastPoint, type MetResponse } from "../../src/forecast";
+import { toForecastPoints, type MetResponse } from "../../src/forecast";
 import { renderMeteogram } from "../../src/meteogram";
 
 interface CardConfig {
@@ -17,10 +17,11 @@ interface CardConfig {
   proxy_url?: string;
 }
 
-// MET only serves hourly (next_1_hours) resolution for roughly the first ~2
-// days, then 6-hourly. We show the full hourly window, so use a generous
-// cutoff and filter to hourly points afterwards.
-const HOURLY_WINDOW_DAYS = 15;
+// MET's locationforecast covers ~10 days: hourly (next_1_hours) for roughly
+// the first ~2 days, then 6-hourly (next_6_hours). By default we show whatever
+// MET returns, so the available data determines the period. This cutoff just
+// needs to exceed MET's horizon so nothing is trimmed.
+const MET_MAX_DAYS = 11;
 
 class MeteogramCard extends HTMLElement {
   private _root: ShadowRoot;
@@ -99,10 +100,9 @@ class MeteogramCard extends HTMLElement {
 
       const data = (await response.json()) as MetResponse;
 
-      // Full hourly window MET publishes; drop the coarser 6-hourly tail.
-      let points = toForecastPoints(data, HOURLY_WINDOW_DAYS).filter(
-        (p: ForecastPoint) => p.stepHours === 1
-      );
+      // Show everything MET returns — hourly for the first ~2 days, then
+      // 6-hourly further out. The available data determines the period.
+      let points = toForecastPoints(data, MET_MAX_DAYS);
 
       // Optional cap on how far ahead to show.
       if (maxDays && maxDays > 0) {
