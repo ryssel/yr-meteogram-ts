@@ -241,29 +241,30 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     lastIconX = x;
   }
 
-  // --- y-axis labels ---
-  const tempAxis: string[] = [];
+  // --- y-axis: gridlines scroll with the chart; the value labels live in a
+  // separate overlay so they stay frozen on the left while you scroll ---
+  const gridLines: string[] = [];
+  const leftLabels: string[] = [];
   for (let t = minTemp; t <= maxTemp; t += tempStep) {
-    const y = yTemp(t);
-    tempAxis.push(`<text x="${marginLeft - 8}" y="${y.toFixed(1) }" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--temp)">${t}°</text>`);
-    tempAxis.push(`<line x1="${marginLeft}" y1="${y.toFixed(1)}" x2="${width - marginRight}" y2="${y.toFixed(1)}" stroke="#eee" stroke-width="1" />`);
+    const y = yTemp(t).toFixed(1);
+    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="#eee" stroke-width="1" />`);
+    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--temp)">${t}°</text>`);
   }
-  const windAxis: string[] = [];
   for (let w = 0; w <= maxWind; w += windStep) {
-    const y = yWind(w);
-    windAxis.push(`<text x="${marginLeft - 8}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--wind)">${w}</text>`);
-    windAxis.push(`<line x1="${marginLeft}" y1="${y.toFixed(1)}" x2="${width - marginRight}" y2="${y.toFixed(1)}" stroke="#f2f2f2" stroke-width="1" />`);
+    const y = yWind(w).toFixed(1);
+    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="#f2f2f2" stroke-width="1" />`);
+    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--wind)">${w}</text>`);
   }
-  const precipAxis: string[] = [0, maxPrecip / 2, maxPrecip].map(
-    (mm) =>
-      `<text x="${width - marginRight + 8}" y="${yPrecip(mm).toFixed(1)}" text-anchor="start" dominant-baseline="middle" font-size="10" fill="var(--precip)">${mm.toFixed(1)}</text>`
-  );
+  // Precip (mm) labels — frozen on the left only.
+  for (const mm of [0, maxPrecip / 2, maxPrecip]) {
+    const y = yPrecip(mm).toFixed(1);
+    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--precip)">${mm.toFixed(1)}</text>`);
+  }
 
   const svg = `
     <svg width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
       <rect x="0" y="0" width="${width}" height="${totalHeight}" fill="#fff" />
-      ${tempAxis.join("")}
-      ${windAxis.join("")}
+      ${gridLines.join("")}
       ${precipBars}
       ${dayLines.join("")}
       ${dayLabels.join("")}
@@ -271,12 +272,26 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
       <path d="${tempPath}" fill="none" stroke="var(--temp)" stroke-width="2.5" />
       <path d="${windPath}" fill="none" stroke="var(--wind)" stroke-width="2" />
       <path d="${gustPath}" fill="none" stroke="var(--wind)" stroke-width="1.5" stroke-dasharray="5,4" />
-      ${precipAxis.join("")}
       ${hourLabels.join("")}
       <line x1="0" y1="${dayLabelHeight}" x2="${width}" y2="${dayLabelHeight}" stroke="#eee" stroke-width="1" />
       <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${width}" y2="${headerHeight + tempPaneHeight}" stroke="#ccc" stroke-width="1" />
     </svg>
   `;
 
-  container.innerHTML = `<div class="meteogram-scroll">${svg}</div>`;
+  // Frozen left axis: a narrow SVG overlaid on the scroll area (a sibling of the
+  // scrolling element, so it doesn't scroll) — the value labels stay put while
+  // the chart scrolls, like freezing a column in a spreadsheet. The opaque
+  // background hides the scrolled chart behind the numbers.
+  const axisW = marginLeft;
+  const axisTop = headerHeight; // leave the icon/day-label header scrolling
+  const axisOverlay = `
+    <svg class="meteogram-axis" width="${axisW}" height="${totalHeight}" viewBox="0 0 ${axisW} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" style="position:absolute;top:0;left:0;pointer-events:none;">
+      <rect x="0" y="${axisTop}" width="${axisW}" height="${totalHeight - axisTop}" fill="#fff" />
+      <line x1="0" y1="${headerHeight + tempPaneHeight}" x2="${axisW}" y2="${headerHeight + tempPaneHeight}" stroke="#ccc" stroke-width="1" />
+      <line x1="${axisW - 0.5}" y1="${headerHeight}" x2="${axisW - 0.5}" y2="${totalHeight - axisHeight}" stroke="#e5e5e5" stroke-width="1" />
+      ${leftLabels.join("")}
+    </svg>
+  `;
+
+  container.innerHTML = `<div class="meteogram-wrap" style="position:relative;"><div class="meteogram-scroll">${svg}</div>${axisOverlay}</div>`;
 }

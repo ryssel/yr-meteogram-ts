@@ -134,10 +134,15 @@ class MeteogramCard extends HTMLElement {
 
       .meteogram-container {
         width: 100%;
-        overflow-x: auto;
         background: var(--ha-card-background, var(--card-background-color, #fff));
         border-radius: var(--ha-card-border-radius, 12px);
         padding: 16px;
+      }
+
+      /* The inner element is the horizontal scroller; .meteogram-wrap around it
+         stays put so the frozen left axis overlay doesn't scroll away. */
+      .meteogram-scroll {
+        overflow-x: auto;
       }
 
       .status {
