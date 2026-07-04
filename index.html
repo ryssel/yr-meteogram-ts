@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meteogram</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="controls">
+        <h1>Meteogram</h1>
+        <form id="location-form">
+          <label>
+            Place
+            <input id="place-name" type="text" value="Kongens Lyngby" />
+          </label>
+          <label>
+            Lat
+            <input id="lat" type="number" step="0.0001" value="55.7681" />
+          </label>
+          <label>
+            Lon
+            <input id="lon" type="number" step="0.0001" value="12.5049" />
+          </label>
+          <label>
+            Days
+            <select id="days">
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="7" selected>7</option>
+              <option value="9">9</option>
+            </select>
+          </label>
+          <button type="submit">Load forecast</button>
+          <button type="button" id="geolocate">Use my location</button>
+        </form>
+      </header>
+      <main id="chart-container">
+        <p class="status">Loading forecast…</p>
+      </main>
+      <footer>
+        <p>
+          Data from
+          <a href="https://api.met.no/" target="_blank" rel="noreferrer">MET Norway</a>,
+          licensed under
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+        </p>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
