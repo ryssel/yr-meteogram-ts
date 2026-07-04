@@ -7,8 +7,11 @@ interface Layout {
   marginRight: number;
   dayLabelHeight: number;
   iconRowHeight: number;
-  tempPaneHeight: number;
-  windPaneHeight: number;
+  pxPerTempTick: number;
+  pxPerWindTick: number;
+  precipBandHeight: number;
+  panePadTop: number;
+  panePadBottom: number;
   axisHeight: number;
 }
 
@@ -18,8 +21,13 @@ const LAYOUT: Layout = {
   marginRight: 42,
   dayLabelHeight: 22,
   iconRowHeight: 34,
-  tempPaneHeight: 230,
-  windPaneHeight: 110,
+  // Vertical spacing between gridlines — pane heights are derived from these
+  // times the number of ticks, so each pane is only as tall as its data needs.
+  pxPerTempTick: 16,
+  pxPerWindTick: 16,
+  precipBandHeight: 38,
+  panePadTop: 8,
+  panePadBottom: 6,
   axisHeight: 24,
 };
 
@@ -40,7 +48,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     return;
   }
 
-  const { pxPerHour, marginLeft, marginRight, dayLabelHeight, iconRowHeight, tempPaneHeight, windPaneHeight, axisHeight } =
+  const { pxPerHour, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, axisHeight } =
     LAYOUT;
   const headerHeight = dayLabelHeight + iconRowHeight;
 
@@ -49,33 +57,46 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const lastTime = last.time.getTime() + last.stepHours * 3600_000;
   const totalHours = (lastTime - firstTime) / 3600_000;
   const width = Math.ceil(marginLeft + marginRight + totalHours * pxPerHour);
-  const totalHeight = headerHeight + tempPaneHeight + windPaneHeight + axisHeight;
 
   const xScale = (t: number) => marginLeft + ((t - firstTime) / 3600_000) * pxPerHour;
 
-  // --- temperature scale ---
+  // --- temperature scale (range fits the data, so the line fills the pane) ---
   const temps = points.map((p) => p.temperature).filter((v): v is number => v !== null);
-  const tempStep = niceStep(Math.max(4, Math.max(...temps) - Math.min(...temps)), 5);
-  const minTemp = Math.floor(Math.min(...temps, 0) / tempStep) * tempStep - tempStep;
-  const maxTemp = Math.ceil(Math.max(...temps) / tempStep) * tempStep + tempStep;
-  const tempTop = headerHeight + 8;
-  const tempBottom = headerHeight + tempPaneHeight - 46;
+  // Enforce a minimum span so a nearly-flat day isn't zoomed into noise.
+  // A higher target favours 2° gridlines for typical day-to-day ranges.
+  const tempStep = niceStep(Math.max(6, Math.max(...temps) - Math.min(...temps)), 8);
+  let minTemp = Math.floor(Math.min(...temps) / tempStep) * tempStep;
+  let maxTemp = Math.ceil(Math.max(...temps) / tempStep) * tempStep;
+  if (maxTemp - minTemp < 2 * tempStep) maxTemp = minTemp + 2 * tempStep; // keep >=2 gridlines
+  const tempIntervals = Math.round((maxTemp - minTemp) / tempStep);
+
+  // --- pane heights derive from the gridline count (dynamic to the data) ---
+  const tempPlot = tempIntervals * pxPerTempTick;
+  const tempTop = headerHeight + panePadTop;
+  const tempBottom = tempTop + tempPlot;
+  const tempPaneHeight = panePadTop + tempPlot + precipBandHeight;
   const yTemp = (t: number) => tempBottom - ((t - minTemp) / (maxTemp - minTemp)) * (tempBottom - tempTop);
 
   // --- precipitation scale (bars grow up from the bottom of the temp pane) ---
   const precipVals = points.map((p) => p.precipitation ?? 0);
   const maxPrecip = Math.max(2, ...precipVals) * 1.35;
-  const precipBase = headerHeight + tempPaneHeight - 4;
-  const precipTop = tempBottom + 8;
+  const precipBase = headerHeight + tempPaneHeight - panePadBottom;
+  const precipTop = tempBottom + 10;
   const yPrecip = (mm: number) => precipBase - (mm / maxPrecip) * (precipBase - precipTop);
 
-  // --- wind scale ---
+  // --- wind scale (0-based, top fits the data) ---
   const windVals = points.flatMap((p) => [p.windSpeed ?? 0, p.windGust ?? 0]);
-  const windStep = niceStep(Math.max(4, Math.max(...windVals)), 3);
-  const maxWind = Math.ceil(Math.max(4, ...windVals) / windStep) * windStep + windStep;
-  const windTop = headerHeight + tempPaneHeight + 8;
-  const windBottom = headerHeight + tempPaneHeight + windPaneHeight - 4;
+  const windStep = niceStep(Math.max(4, Math.max(...windVals)), 5);
+  let maxWind = Math.ceil(Math.max(4, ...windVals) / windStep) * windStep;
+  if (maxWind < 2 * windStep) maxWind = 2 * windStep;
+  const windIntervals = Math.round(maxWind / windStep);
+  const windPlot = windIntervals * pxPerWindTick;
+  const windTop = headerHeight + tempPaneHeight + panePadTop;
+  const windBottom = windTop + windPlot;
+  const windPaneHeight = panePadTop + windPlot + panePadBottom;
   const yWind = (v: number) => windBottom - (v / maxWind) * (windBottom - windTop);
+
+  const totalHeight = headerHeight + tempPaneHeight + windPaneHeight + axisHeight;
 
   // --- build line paths ---
   let tempPath = "";
