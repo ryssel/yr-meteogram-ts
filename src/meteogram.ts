@@ -42,6 +42,68 @@ function niceStep(range: number, targetTicks: number): number {
   return step * magnitude;
 }
 
+/**
+ * Builds a smooth SVG path through the given points using monotone cubic Hermite
+ * interpolation (Fritsch–Carlson). The curve passes through every point and
+ * never overshoots — it won't invent a peak or dip beyond the data — which keeps
+ * temperature/wind readings honest, especially across the coarser 6-hourly
+ * stretch where points are far apart. Parameterized by x, so uneven spacing
+ * (the 1h→6h transition) is handled naturally.
+ */
+function smoothPath(pts: { x: number; y: number }[]): string {
+  const n = pts.length;
+  if (n === 0) return "";
+  const p = (i: number) => `${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)}`;
+  if (n === 1) return `M${p(0)}`;
+  if (n === 2) return `M${p(0)} L${p(1)}`;
+
+  // Secant slopes between consecutive points.
+  const d: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    d.push((pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x));
+  }
+
+  // Tangents at each point (average of adjacent secants at interior points).
+  const m: number[] = new Array(n);
+  m[0] = d[0];
+  m[n - 1] = d[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    // At a local extremum (secants change sign or are flat) force a flat
+    // tangent so the curve tops/bottoms out exactly at the point.
+    m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  }
+
+  // Fritsch–Carlson: clamp tangents so the interpolant stays monotonic
+  // (prevents overshoot).
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const alpha = m[i] / d[i];
+    const beta = m[i + 1] / d[i];
+    const s = alpha * alpha + beta * beta;
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * alpha * d[i];
+      m[i + 1] = t * beta * d[i];
+    }
+  }
+
+  // Emit one cubic Bézier per interval using the Hermite→Bézier conversion.
+  let path = `M${p(0)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = pts[i + 1].x - pts[i].x;
+    const c1x = pts[i].x + h / 3;
+    const c1y = pts[i].y + (m[i] * h) / 3;
+    const c2x = pts[i + 1].x - h / 3;
+    const c2y = pts[i + 1].y - (m[i + 1] * h) / 3;
+    path += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p(i + 1)}`;
+  }
+  return path;
+}
+
 export function renderMeteogram(container: HTMLElement, points: ForecastPoint[]): void {
   if (points.length === 0) {
     container.innerHTML = `<p class="status">No forecast data available.</p>`;
@@ -98,16 +160,19 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
 
   const totalHeight = headerHeight + tempPaneHeight + windPaneHeight + axisHeight;
 
-  // --- build line paths ---
-  let tempPath = "";
-  let windPath = "";
-  let gustPath = "";
+  // --- build line paths (smoothed with monotone cubic interpolation) ---
+  const tempPts: { x: number; y: number }[] = [];
+  const windPts: { x: number; y: number }[] = [];
+  const gustPts: { x: number; y: number }[] = [];
   for (const p of points) {
     const x = xScale(p.time.getTime());
-    if (p.temperature !== null) tempPath += `${tempPath ? "L" : "M"}${x.toFixed(1)},${yTemp(p.temperature).toFixed(1)} `;
-    if (p.windSpeed !== null) windPath += `${windPath ? "L" : "M"}${x.toFixed(1)},${yWind(p.windSpeed).toFixed(1)} `;
-    if (p.windGust !== null) gustPath += `${gustPath ? "L" : "M"}${x.toFixed(1)},${yWind(p.windGust).toFixed(1)} `;
+    if (p.temperature !== null) tempPts.push({ x, y: yTemp(p.temperature) });
+    if (p.windSpeed !== null) windPts.push({ x, y: yWind(p.windSpeed) });
+    if (p.windGust !== null) gustPts.push({ x, y: yWind(p.windGust) });
   }
+  const tempPath = smoothPath(tempPts);
+  const windPath = smoothPath(windPts);
+  const gustPath = smoothPath(gustPts);
 
   // --- precipitation bars ---
   const precipBars = points
