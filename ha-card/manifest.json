@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "name": "Meteogram Card",
   "description": "Scrollable weather meteogram using MET Norway Locationforecast API",
@@ -7,7 +7,7 @@
   "config": {
     "schema": {
       "type": "object",
-      "required": [],
+      "required": ["proxy_url"],
       "properties": {
         "type": {
           "type": "string"
@@ -24,15 +24,13 @@
         },
         "days": {
           "type": "integer",
-          "description": "Number of days of forecast to show",
-          "default": 5,
+          "description": "Optional cap on forecast days to show. Omit to show MET's full hourly window (~2 days)",
           "minimum": 1,
           "maximum": 14
         },
         "proxy_url": {
           "type": "string",
-          "description": "Optional: proxy endpoint URL that adds MET User-Agent header. If omitted, calls MET API directly (may fail due to CORS)",
-          "default": null
+          "description": "Required: base path of a proxy that forwards to api.met.no with the MET User-Agent header. Use the relative path /met (same-origin, recommended). The card appends the locationforecast path and coordinates."
         }
       }
     }
