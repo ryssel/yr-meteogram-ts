@@ -8,6 +8,7 @@
   --temp: #d62c2c;
   --precip: #3d8bd4;
   --wind: #8e44ad;
+  --accent: #2f6db0;
   /* Aliases consumed by the shared SVG renderer (src/meteogram.ts). Defining
      them here (and overriding in dark) is what makes the chart follow the
      web app's theme, mirroring how HA's theme vars drive the card. */
@@ -29,6 +30,7 @@
     --paper: #1c1f26;
     --line: #2b2f39;
     --muted: #9aa0ab;
+    --accent: #4f93d6;
     --divider-color: rgba(255, 255, 255, 0.14);
     --scrollbar-thumb-color: #565b66;
   }
@@ -40,6 +42,7 @@
   --paper: #1c1f26;
   --line: #2b2f39;
   --muted: #9aa0ab;
+  --accent: #4f93d6;
   --divider-color: rgba(255, 255, 255, 0.14);
   --scrollbar-thumb-color: #565b66;
 }
@@ -122,9 +125,9 @@ h1 {
   height: 34px;
   padding: 0 14px;
   border-radius: 6px;
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: var(--paper);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -132,6 +135,7 @@ h1 {
 #location-form button#geolocate {
   background: var(--paper);
   color: var(--ink);
+  border-color: var(--line);
 }
 
 #chart-container {
