@@ -25,6 +25,32 @@ async function loadAndRender(): Promise<void> {
   }
 }
 
+// --- theme toggle (dark mode) ---
+// Default follows the OS via prefers-color-scheme (handled in CSS); the toggle
+// forces a choice via data-theme on <html> and remembers it. The SVG reads CSS
+// custom properties, so it recolours live without re-rendering.
+const themeToggle = document.querySelector<HTMLButtonElement>("#theme-toggle")!;
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark" || savedTheme === "light") {
+  document.documentElement.setAttribute("data-theme", savedTheme);
+}
+function isDark(): boolean {
+  const forced = document.documentElement.getAttribute("data-theme");
+  return forced ? forced === "dark" : prefersDark.matches;
+}
+function updateThemeToggle(): void {
+  themeToggle.textContent = isDark() ? "☀️" : "🌙";
+}
+updateThemeToggle();
+prefersDark.addEventListener("change", updateThemeToggle);
+themeToggle.addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  updateThemeToggle();
+});
+
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   void loadAndRender();
