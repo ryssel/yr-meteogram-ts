@@ -14,6 +14,9 @@ export default {
     commonjs(),
     typescript({
       tsconfig: false,
+      // Only compile the card + shared app sources; keep vite.config.ts and
+      // other project files out of the bundle (avoids spurious TS warnings).
+      include: ["ha-card/src/**/*.ts", "src/**/*.ts"],
       compilerOptions: {
         target: "es2020",
         module: "es2020",

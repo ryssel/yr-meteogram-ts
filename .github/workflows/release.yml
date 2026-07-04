@@ -1,0 +1,36 @@
+name: Release HACS card
+
+# Build the Lovelace card and publish it as a GitHub Release asset so HACS
+# can install it. Trigger by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build card
+        run: npm run build:card
+
+      - name: Publish release with card asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # The asset filename MUST match `filename` in hacs.json
+          files: ha-card/dist/meteogram-card.js
+          generate_release_notes: true
