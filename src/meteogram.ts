@@ -3,6 +3,7 @@ import { iconAt } from "./icons";
 
 interface Layout {
   pxPerHour: number;
+  pxPerHourLong: number;
   marginLeft: number;
   marginRight: number;
   dayLabelHeight: number;
@@ -18,6 +19,9 @@ interface Layout {
 
 const LAYOUT: Layout = {
   pxPerHour: 16,
+  // Compressed rate for the 6-hourly long-range tail so it doesn't require
+  // endless horizontal scrolling.
+  pxPerHourLong: 6,
   marginLeft: 42,
   marginRight: 42,
   dayLabelHeight: 22,
@@ -128,17 +132,27 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     return;
   }
 
-  const { pxPerHour, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, arrowRowHeight, axisHeight } =
+  const { pxPerHour, pxPerHourLong, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, arrowRowHeight, axisHeight } =
     LAYOUT;
   const headerHeight = dayLabelHeight + iconRowHeight;
 
   const firstTime = points[0].time.getTime();
   const last = points[points.length - 1];
   const lastTime = last.time.getTime() + last.stepHours * 3600_000;
-  const totalHours = (lastTime - firstTime) / 3600_000;
-  const width = Math.ceil(marginLeft + marginRight + totalHours * pxPerHour);
 
-  const xScale = (t: number) => marginLeft + ((t - firstTime) / 3600_000) * pxPerHour;
+  // Compress the chart horizontally once MET drops to 6-hourly data. The break
+  // is the first midnight after 6-hourly data begins, so the hourly region and
+  // the transition day stay full width; only whole 6-hourly days shrink.
+  const firstSixHourly = points.find((p) => p.stepHours === 6);
+  const breakTime = firstSixHourly ? new Date(firstSixHourly.time).setHours(24, 0, 0, 0) : Infinity;
+  const xAtBreak = breakTime === Infinity ? Infinity : marginLeft + ((breakTime - firstTime) / 3600_000) * pxPerHour;
+
+  const xScale = (t: number) =>
+    t <= breakTime
+      ? marginLeft + ((t - firstTime) / 3600_000) * pxPerHour
+      : xAtBreak + ((t - breakTime) / 3600_000) * pxPerHourLong;
+
+  const width = Math.ceil(xScale(lastTime) + marginRight);
 
   // --- temperature scale (range fits the data, so the line fills the pane) ---
   const temps = points.map((p) => p.temperature).filter((v): v is number => v !== null);
@@ -197,7 +211,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     .filter((p) => (p.precipitation ?? 0) > 0)
     .map((p) => {
       const x = xScale(p.time.getTime());
-      const barWidth = Math.max(2, p.stepHours * pxPerHour - 2);
+      const barWidth = Math.max(2, xScale(p.time.getTime() + p.stepHours * 3600_000) - x - 2);
       const yTop = yPrecip(p.precipitation!);
       const h = precipBase - yTop;
       return `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="var(--precip)" opacity="0.85" />`;
@@ -216,14 +230,15 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     );
     const nextMidnight = new Date(cursor);
     nextMidnight.setDate(cursor.getDate() + 1);
-    const labelCenter = xScale(cursor.getTime()) + (Math.min(nextMidnight.getTime(), lastTime) - cursor.getTime()) / 3600_000 / 2 * pxPerHour;
+    const labelCenter = xScale((cursor.getTime() + Math.min(nextMidnight.getTime(), lastTime)) / 2);
     dayLabels.push(
       `<text x="${labelCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="#222">${dayLabelFmt.format(cursor)}</text>`
     );
     cursor.setDate(cursor.getDate() + 1);
   }
   // Label for the first (partial) day segment
-  const firstDayCenter = xScale(firstTime) + Math.min(new Date(firstTime).setHours(24, 0, 0, 0) - firstTime, lastTime - firstTime) / 3600_000 / 2 * pxPerHour;
+  const firstMidnight = new Date(firstTime).setHours(24, 0, 0, 0);
+  const firstDayCenter = xScale((firstTime + Math.min(firstMidnight, lastTime)) / 2);
   dayLabels.unshift(
     `<text x="${firstDayCenter.toFixed(1)}" y="${dayLabelHeight - 8}" text-anchor="middle" font-size="12" font-weight="600" fill="#222">${dayLabelFmt.format(new Date(firstTime))}</text>`
   );
@@ -235,8 +250,11 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   hourCursor.setMinutes(0, 0, 0);
   let i = 0;
   while (hourCursor.getTime() < lastTime) {
-    if (hourCursor.getTime() >= firstTime && i % hourTickEvery === 0) {
-      const x = xScale(hourCursor.getTime());
+    const t = hourCursor.getTime();
+    // Full cadence in the hourly region; only every 6h in the compressed tail.
+    const show = t >= firstTime && (t <= breakTime ? i % hourTickEvery === 0 : hourCursor.getHours() % 6 === 0);
+    if (show) {
+      const x = xScale(t);
       hourLabels.push(
         `<text x="${x.toFixed(1)}" y="${totalHeight - 6}" text-anchor="middle" font-size="10" fill="#666">${hourLabelFmt.format(hourCursor)}</text>`
       );
