@@ -29,6 +29,8 @@ class MeteogramCard extends HTMLElement {
   private _config?: CardConfig;
   private _container?: HTMLDivElement;
   private _statusEl?: HTMLParagraphElement;
+  private _lastKey?: string;
+  private _refreshTimer?: number;
 
   constructor() {
     super();
@@ -38,14 +40,27 @@ class MeteogramCard extends HTMLElement {
     this._root = this.attachShadow({ mode: "open" });
   }
 
+  connectedCallback() {
+    // Refresh on a timer so the forecast stays current without re-rendering
+    // (and resetting the scroll position) on every Home Assistant state update.
+    this._refreshTimer = window.setInterval(() => this.refresh(), 30 * 60 * 1000);
+  }
+
+  disconnectedCallback() {
+    if (this._refreshTimer) window.clearInterval(this._refreshTimer);
+    this._refreshTimer = undefined;
+  }
+
   setConfig(config: CardConfig) {
     this._config = config;
-    this.requestUpdate();
+    this.maybeLoad();
   }
 
   set hass(hass: HomeAssistant) {
     this._hass = hass;
-    this.requestUpdate();
+    // maybeLoad() no-ops unless the location/config actually changed, so the
+    // frequent hass updates don't rebuild the chart and reset the scroll.
+    this.maybeLoad();
   }
 
   private ensureDom() {
@@ -65,13 +80,26 @@ class MeteogramCard extends HTMLElement {
     this._container.appendChild(this._statusEl);
   }
 
-  private requestUpdate() {
+  // Load only when the location/config changed — not on every hass update.
+  private maybeLoad() {
     if (!this._hass || !this._config) return;
 
     const latitude = this._config.latitude ?? this._hass.config.latitude;
     const longitude = this._config.longitude ?? this._hass.config.longitude;
+    const key = `${latitude},${longitude},${this._config.days ?? ""},${this._config.proxy_url ?? ""}`;
+    if (key === this._lastKey) return;
+    this._lastKey = key;
 
     this.ensureDom();
+    this.updateForecast(latitude, longitude, this._config.days);
+  }
+
+  // Re-fetch without changing config (used by the periodic refresh timer);
+  // updateForecast preserves the current scroll position.
+  private refresh() {
+    if (!this._hass || !this._config || !this._container) return;
+    const latitude = this._config.latitude ?? this._hass.config.latitude;
+    const longitude = this._config.longitude ?? this._hass.config.longitude;
     this.updateForecast(latitude, longitude, this._config.days);
   }
 
@@ -90,8 +118,6 @@ class MeteogramCard extends HTMLElement {
     }
 
     try {
-      this._statusEl.textContent = "Loading forecast…";
-
       // proxy_url is the base that maps to api.met.no; append the MET path.
       const endpoint = `${proxyBase}/weatherapi/locationforecast/2.0/complete?lat=${latitude}&lon=${longitude}`;
 
@@ -110,8 +136,12 @@ class MeteogramCard extends HTMLElement {
         points = points.filter((p) => p.time.getTime() <= cutoff);
       }
 
+      // Preserve horizontal scroll across the re-render (e.g. periodic refresh).
+      const prevScroll = this._container.querySelector<HTMLElement>(".meteogram-scroll")?.scrollLeft ?? 0;
       this._container.innerHTML = "";
       renderMeteogram(this._container, points);
+      const scroller = this._container.querySelector<HTMLElement>(".meteogram-scroll");
+      if (scroller) scroller.scrollLeft = prevScroll;
     } catch (error) {
       this._container.innerHTML = "";
       const msg = document.createElement("p");
