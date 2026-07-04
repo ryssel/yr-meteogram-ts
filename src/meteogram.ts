@@ -7,7 +7,8 @@ interface Layout {
   marginLeft: number;
   marginRight: number;
   dayLabelHeight: number;
-  iconRowHeight: number;
+  iconSize: number;
+  iconClearance: number;
   pxPerTempTick: number;
   pxPerWindTick: number;
   precipBandHeight: number;
@@ -25,7 +26,10 @@ const LAYOUT: Layout = {
   marginLeft: 42,
   marginRight: 42,
   dayLabelHeight: 22,
-  iconRowHeight: 34,
+  // Icons ride just above the temperature line; iconClearance reserves space at
+  // the top of the temp pane so an icon at the peak temperature isn't clipped.
+  iconSize: 24,
+  iconClearance: 30,
   // Vertical spacing between gridlines — pane heights are derived from these
   // times the number of ticks, so each pane is only as tall as its data needs.
   pxPerTempTick: 16,
@@ -132,9 +136,11 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     return;
   }
 
-  const { pxPerHour, pxPerHourLong, marginLeft, marginRight, dayLabelHeight, iconRowHeight, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, arrowRowHeight, axisHeight } =
+  const { pxPerHour, pxPerHourLong, marginLeft, marginRight, dayLabelHeight, iconSize, iconClearance, pxPerTempTick, pxPerWindTick, precipBandHeight, panePadTop, panePadBottom, arrowRowHeight, axisHeight } =
     LAYOUT;
-  const headerHeight = dayLabelHeight + iconRowHeight;
+  // Header is just the day-label row now; weather icons live inside the temp
+  // pane, riding above the temperature line.
+  const headerHeight = dayLabelHeight;
 
   const firstTime = points[0].time.getTime();
   const last = points[points.length - 1];
@@ -166,9 +172,9 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
 
   // --- pane heights derive from the gridline count (dynamic to the data) ---
   const tempPlot = tempIntervals * pxPerTempTick;
-  const tempTop = headerHeight + panePadTop;
+  const tempTop = headerHeight + panePadTop + iconClearance;
   const tempBottom = tempTop + tempPlot;
-  const tempPaneHeight = panePadTop + tempPlot + precipBandHeight;
+  const tempPaneHeight = panePadTop + iconClearance + tempPlot + precipBandHeight;
   const yTemp = (t: number) => tempBottom - ((t - minTemp) / (maxTemp - minTemp)) * (tempBottom - tempTop);
 
   // --- precipitation scale (bars grow up from the bottom of the temp pane) ---
@@ -263,16 +269,16 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     i++;
   }
 
-  // --- weather icons (spaced to avoid overlapping, following the data's own resolution) ---
+  // --- weather icons (ride just above the temperature line, yr.no style) ---
   const icons: string[] = [];
-  const iconSize = Math.min(26, iconRowHeight - 6);
   const minIconSpacing = iconSize + 6;
-  const iconY = dayLabelHeight + iconRowHeight / 2;
+  const iconTopLimit = headerHeight + iconSize / 2 + 2; // don't overlap day labels
   let lastIconX = -Infinity;
   for (const p of points) {
-    if (!p.symbol) continue;
+    if (!p.symbol || p.temperature === null) continue;
     const x = xScale(p.time.getTime());
     if (x - lastIconX < minIconSpacing) continue;
+    const iconY = Math.max(iconTopLimit, yTemp(p.temperature) - iconSize / 2 - 4);
     icons.push(iconAt(p.symbol, x, iconY, iconSize));
     lastIconX = x;
   }
