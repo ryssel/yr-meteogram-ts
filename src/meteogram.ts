@@ -183,7 +183,7 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
 
   // --- precipitation scale (bars grow up from the bottom of the temp pane) ---
   const precipVals = points.map((p) => p.precipitation ?? 0);
-  const maxPrecip = Math.max(2, ...precipVals) * 1.35;
+  const maxPrecip = Math.max(2, ...precipVals) * 1.35; // *1.35 = headroom above the tallest bar
   const precipBase = headerHeight + tempPaneHeight - panePadBottom;
   const precipTop = tempBottom + 10;
   const yPrecip = (mm: number) => precipBase - (mm / maxPrecip) * (precipBase - precipTop);
@@ -313,10 +313,15 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
     gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #f2f2f2)" stroke-width="1" />`);
     leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--wind)">${w}</text>`);
   }
-  // Precip (mm) labels — frozen on the left only.
-  for (const mm of [0, maxPrecip / 2, maxPrecip]) {
+  // Precip (mm) labels — frozen on the left. Label round tick values within the
+  // scale (0, step, 2·step…) instead of 0/half/max, which produced decimals like
+  // 1.4/2.7. Bars keep their scaling; only the label positions are rounded.
+  const precipStep = niceStep(maxPrecip, 4);
+  const precipFmt = (v: number) => (precipStep % 1 === 0 ? String(v) : v.toFixed(1));
+  for (let i = 0; i * precipStep <= maxPrecip + 1e-9; i++) {
+    const mm = i * precipStep;
     const y = yPrecip(mm).toFixed(1);
-    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--precip)">${mm.toFixed(1)}</text>`);
+    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--precip)">${precipFmt(mm)}</text>`);
   }
 
   const svg = `
