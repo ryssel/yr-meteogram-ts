@@ -217,12 +217,208 @@ class MeteogramCard extends HTMLElement {
     // when we have it, otherwise a reasonable default.
     return this._cardHeight ? Math.ceil((this._cardHeight + 32) / 50) : 4;
   }
+
+  // --- Lovelace visual editor hooks ---
+  static getConfigElement(): HTMLElement {
+    return document.createElement("meteogram-card-editor");
+  }
+
+  static getStubConfig(): CardConfig {
+    // Sensible default when added via the UI: MET via the recommended
+    // same-origin proxy path.
+    return { type: "custom:meteogram-card", proxy_url: "/met" };
+  }
+}
+
+// --- Visual editor (Lovelace UI) ---
+// Plain-DOM config editor — no framework / ha-form dependency, matching the
+// rest of the card. Emits `config-changed` so HA persists edits live.
+class MeteogramCardEditor extends HTMLElement {
+  private _root: ShadowRoot;
+  private _config: CardConfig = { type: "custom:meteogram-card" };
+  private _hass?: HomeAssistant;
+  private _fields?: {
+    source: HTMLSelectElement;
+    proxyUrl: HTMLInputElement;
+    proxyRow: HTMLElement;
+    latitude: HTMLInputElement;
+    longitude: HTMLInputElement;
+    days: HTMLInputElement;
+  };
+
+  constructor() {
+    super();
+    this._root = this.attachShadow({ mode: "open" });
+  }
+
+  // HA assigns hass; the editor doesn't need it, but accept it cleanly.
+  set hass(hass: HomeAssistant) {
+    this._hass = hass;
+  }
+
+  setConfig(config: CardConfig): void {
+    this._config = { ...config };
+    this._ensureDom();
+    this._syncFromConfig();
+  }
+
+  private _ensureDom(): void {
+    if (this._fields) return;
+
+    const style = document.createElement("style");
+    style.textContent = MeteogramCardEditor.styles;
+    this._root.appendChild(style);
+
+    const form = document.createElement("div");
+    form.className = "editor";
+
+    const source = document.createElement("select");
+    for (const provider of Object.values(PROVIDERS)) {
+      const opt = document.createElement("option");
+      opt.value = provider.id;
+      opt.textContent = provider.label;
+      source.appendChild(opt);
+    }
+
+    const proxyUrl = document.createElement("input");
+    proxyUrl.type = "text";
+    proxyUrl.placeholder = "/met";
+
+    const latitude = document.createElement("input");
+    latitude.type = "number";
+    latitude.step = "0.0001";
+    latitude.placeholder = "HA home latitude";
+
+    const longitude = document.createElement("input");
+    longitude.type = "number";
+    longitude.step = "0.0001";
+    longitude.placeholder = "HA home longitude";
+
+    const days = document.createElement("input");
+    days.type = "number";
+    days.min = "1";
+    days.placeholder = "full range";
+
+    form.appendChild(this._row("Source", source, "Where the forecast comes from."));
+    const proxyRow = this._row(
+      "Proxy URL",
+      proxyUrl,
+      "Required for MET — a proxy that adds MET's User-Agent (e.g. /met). Not needed for DMI.",
+    );
+    form.appendChild(proxyRow);
+    form.appendChild(this._row("Latitude", latitude, "Optional — defaults to your Home Assistant location."));
+    form.appendChild(this._row("Longitude", longitude, "Optional — defaults to your Home Assistant location."));
+    form.appendChild(this._row("Days", days, "Optional cap on days shown. Omit for the source's full range."));
+
+    this._root.appendChild(form);
+    this._fields = { source, proxyUrl, proxyRow, latitude, longitude, days };
+
+    source.addEventListener("change", () => this._onInput());
+    for (const el of [proxyUrl, latitude, longitude, days]) {
+      el.addEventListener("input", () => this._onInput());
+    }
+  }
+
+  private _row(labelText: string, control: HTMLElement, help: string): HTMLElement {
+    const wrap = document.createElement("label");
+    wrap.className = "field";
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = labelText;
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = help;
+    wrap.append(label, control, hint);
+    return wrap;
+  }
+
+  // Populate fields from config without disturbing whichever one has focus
+  // (setting .value on the focused input would jump the cursor).
+  private _syncFromConfig(): void {
+    if (!this._fields) return;
+    const f = this._fields;
+    this._setValue(f.source, this._config.source ?? DEFAULT_SOURCE);
+    this._setValue(f.proxyUrl, this._config.proxy_url ?? "");
+    this._setValue(f.latitude, this._config.latitude != null ? String(this._config.latitude) : "");
+    this._setValue(f.longitude, this._config.longitude != null ? String(this._config.longitude) : "");
+    this._setValue(f.days, this._config.days != null ? String(this._config.days) : "");
+    this._updateProxyVisibility();
+  }
+
+  private _setValue(el: HTMLSelectElement | HTMLInputElement, value: string): void {
+    if (this._root.activeElement === el) return; // don't clobber the field being edited
+    el.value = value;
+  }
+
+  private _updateProxyVisibility(): void {
+    if (!this._fields) return;
+    const source = (this._fields.source.value || DEFAULT_SOURCE) as SourceId;
+    const provider = PROVIDERS[source] ?? PROVIDERS[DEFAULT_SOURCE];
+    this._fields.proxyRow.style.display = provider.requiresProxy ? "" : "none";
+  }
+
+  private _onInput(): void {
+    if (!this._fields) return;
+    const f = this._fields;
+    const next: CardConfig = { type: this._config.type || "custom:meteogram-card" };
+
+    const source = (f.source.value || DEFAULT_SOURCE) as SourceId;
+    if (source !== DEFAULT_SOURCE) next.source = source;
+
+    const proxyUrl = f.proxyUrl.value.trim();
+    if (proxyUrl) next.proxy_url = proxyUrl;
+
+    const lat = f.latitude.value.trim();
+    if (lat !== "" && !Number.isNaN(Number(lat))) next.latitude = Number(lat);
+    const lon = f.longitude.value.trim();
+    if (lon !== "" && !Number.isNaN(Number(lon))) next.longitude = Number(lon);
+
+    const days = f.days.value.trim();
+    if (days !== "" && Number(days) > 0) next.days = Number(days);
+
+    this._config = next;
+    this._updateProxyVisibility();
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: next },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  static get styles(): string {
+    return `
+      .editor {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 8px 0;
+        color: var(--primary-text-color, #212121);
+        font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
+      }
+      .field { display: flex; flex-direction: column; gap: 4px; }
+      .label { font-size: 13px; font-weight: 600; }
+      .hint { font-size: 11px; color: var(--secondary-text-color, #727272); }
+      select, input {
+        padding: 8px;
+        font-size: 14px;
+        border: 1px solid var(--divider-color, #ccc);
+        border-radius: 6px;
+        background: var(--card-background-color, #fff);
+        color: var(--primary-text-color, #212121);
+      }
+    `;
+  }
 }
 
 // Guard against double-registration — a module can get loaded more than once
 // (e.g. after a HACS update), and a second define() would throw.
 if (!customElements.get("meteogram-card")) {
   customElements.define("meteogram-card", MeteogramCard);
+}
+if (!customElements.get("meteogram-card-editor")) {
+  customElements.define("meteogram-card-editor", MeteogramCardEditor);
 }
 
 // Required for HA to recognize this
@@ -236,5 +432,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "meteogram-card",
   name: "Meteogram",
-  description: "Scrollable weather meteogram using MET Norway data",
+  description: "Scrollable multi-day weather meteogram (MET Norway or DMI)",
+  preview: true,
+  documentationURL: "https://github.com/ryssel/yr-meteogram-ts/blob/main/ha-card/README.md",
 });

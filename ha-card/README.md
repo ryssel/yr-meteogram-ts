@@ -137,6 +137,11 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 
 ## Configuration
 
+The card supports Home Assistant's **visual editor** — add it from the dashboard
+card picker or click **Edit** on an existing card to set these options via form
+fields (the Proxy URL field hides itself when you pick a source that doesn't need
+it). You can also set them in YAML:
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `source` | string | `met` | Forecast source: `met` (MET Norway, ~10 days) or `dmi` (DMI via Open-Meteo, ~2.5 days). See **Data source** below. |

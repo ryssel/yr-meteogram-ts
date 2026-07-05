@@ -7,19 +7,33 @@
     <style>
       body { background: #1c1c1c; color: #e8e8e8; font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; padding: 16px; }
       h2 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; color: #bbb; }
-      /* Provide the HA theme vars the card reads, so it looks card-like here. */
-      meteogram-card { --ha-card-background: #2b2b2b; --primary-text-color: #e8e8e8; --secondary-text-color: #a9a9a9; --divider-color: #444; --scrollbar-thumb-color: #666; display: block; }
+      /* Provide the HA theme vars the card + editor read, so they look native here. */
+      meteogram-card, meteogram-card-editor {
+        --ha-card-background: #2b2b2b;
+        --card-background-color: #333;
+        --primary-text-color: #e8e8e8;
+        --secondary-text-color: #a9a9a9;
+        --divider-color: #444;
+        --scrollbar-thumb-color: #666;
+        display: block;
+      }
     </style>
   </head>
   <body>
     <h1 style="font-size:16px;">Card dev harness (not shipped)</h1>
+
     <h2>MET Norway — proxy_url: /met, days: 3</h2>
     <div id="met"></div>
+
     <h2>DMI (via Open-Meteo) — source: dmi, no proxy_url</h2>
     <div id="dmi"></div>
 
+    <h2>Visual editor (live) — edits re-render the card below</h2>
+    <div id="editor"></div>
+    <div id="live"></div>
+
     <script type="module">
-      // Registers the <meteogram-card> custom element.
+      // Registers <meteogram-card> and <meteogram-card-editor>.
       import "/ha-card/src/meteogram-card.ts";
 
       // Minimal HomeAssistant stub — the card only reads hass.config.lat/lon.
@@ -30,10 +44,29 @@
         document.getElementById(id).appendChild(el); // connect first (connectedCallback)
         el.setConfig(config);
         el.hass = hass; // triggers the initial load
+        return el;
       }
 
       mount("met", { type: "custom:meteogram-card", proxy_url: "/met", days: 3 });
       mount("dmi", { type: "custom:meteogram-card", source: "dmi" });
+
+      // --- Editor wired to a live card ---
+      const initial = { type: "custom:meteogram-card", proxy_url: "/met", days: 3 };
+
+      const live = document.createElement("meteogram-card");
+      document.getElementById("live").appendChild(live);
+      live.setConfig(initial);
+      live.hass = hass;
+
+      const editor = document.createElement("meteogram-card-editor");
+      editor.hass = hass;
+      editor.setConfig(initial);
+      document.getElementById("editor").appendChild(editor);
+
+      editor.addEventListener("config-changed", (e) => {
+        console.log("config-changed →", JSON.stringify(e.detail.config));
+        live.setConfig(e.detail.config); // maybeLoad re-fetches on key change
+      });
     </script>
   </body>
 </html>
