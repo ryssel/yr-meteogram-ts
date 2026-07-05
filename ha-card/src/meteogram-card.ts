@@ -175,6 +175,9 @@ class MeteogramCard extends HTMLElement {
 
       .meteogram-container {
         width: 100%;
+        /* Include padding in the width so the card matches the column width of
+           sibling cards instead of overflowing it by 2*padding. */
+        box-sizing: border-box;
         background: var(--ha-card-background, var(--card-background-color, #fff));
         border-radius: var(--ha-card-border-radius, 12px);
         padding: 16px;
