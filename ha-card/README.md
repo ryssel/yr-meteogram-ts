@@ -139,10 +139,11 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `proxy_url` | string | — | **Required.** Base path of your MET proxy — use the relative `/met` (same-origin, recommended). The card appends `/weatherapi/locationforecast/2.0/complete?lat=…&lon=…`. An absolute `https://…/met` also works but is CORS/mixed-content prone. |
+| `source` | string | `met` | Forecast source: `met` (MET Norway, ~10 days) or `dmi` (DMI via Open-Meteo, ~2.5 days). See **Data source** below. |
+| `proxy_url` | string | — | **Required for `met`** (not needed for `dmi`). Base path of your MET proxy — use the relative `/met` (same-origin, recommended). The card appends `/weatherapi/locationforecast/2.0/complete?lat=…&lon=…`. An absolute `https://…/met` also works but is CORS/mixed-content prone. |
 | `latitude` | number | HA home latitude | Forecast location latitude |
 | `longitude` | number | HA home longitude | Forecast location longitude |
-| `days` | integer | full range | Optionally **trims** the forecast to the next N days. Omit to show MET's full range (~10 days) — that's MET's own forecast horizon, so there's no way to show more. |
+| `days` | integer | full range | Optionally **trims** the forecast to the next N days. Omit to show the source's full range. |
 
 ### Location
 
@@ -160,6 +161,30 @@ longitude: 10.7522
 Get coordinates from any maps tool (e.g. right-click a spot in Google Maps).
 The card re-fetches whenever you change these (and on its ~30-minute refresh),
 so you can put several cards on a dashboard pointed at different locations.
+
+### Data source
+
+Pick the forecast source with `source`:
+
+- **`met`** (default) — MET Norway's Locationforecast: ~10 days (hourly for ~2
+  days, then 6-hourly). **Requires `proxy_url`** (a proxy that adds MET's
+  User-Agent — see setup above).
+- **`dmi`** — DMI's HARMONIE-AROME model via
+  [Open-Meteo](https://open-meteo.com/): short-range (~2.5 days, hourly). Open-Meteo
+  is keyless and CORS-open, so **no `proxy_url` is needed**. Icons are derived
+  from Open-Meteo's WMO weather codes.
+
+There is **no in-card toggle** — each card is one source, set in its config. To
+compare both, add two cards:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:meteogram-card
+    proxy_url: /met        # MET Norway (~10 days)
+  - type: custom:meteogram-card
+    source: dmi            # DMI via Open-Meteo (~2.5 days, no proxy)
+```
 
 ## What it renders
 
@@ -199,9 +224,10 @@ the browser console (F12). Confirm the Lovelace resource points at
 
 ## Data attribution
 
-Forecast data from [MET Norway](https://api.met.no/), licensed
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution to MET
-Norway is required when using this data.
+Forecast data from [MET Norway](https://api.met.no/) or, with `source: dmi`,
+from [DMI](https://dmi.dk/) via [Open-Meteo](https://open-meteo.com/) — both
+licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribution
+to the data source is required when using this data.
 
 ## Development
 
