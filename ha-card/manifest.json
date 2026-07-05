@@ -1,5 +1,5 @@
 {
-  "version": "0.2.10",
+  "version": "0.2.15",
   "type": "module",
   "name": "Meteogram Card",
   "description": "Scrollable weather meteogram using MET Norway Locationforecast API",

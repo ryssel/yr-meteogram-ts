@@ -2,14 +2,18 @@
 
 A custom Home Assistant Lovelace card that displays a scrollable, multi-day
 weather meteogram (temperature, precipitation, wind speed + gusts, weather
-icons) using MET Norway's free Locationforecast API — in the style of yr.no's
-forecast graph.
+icons, and wind-direction arrows) using MET Norway's free Locationforecast API
+— in the style of yr.no's forecast graph.
 
-![Meteogram card](images/meteogram.png)
+![Meteogram card — dark theme](images/meteogram-dark.png)
+
+![Meteogram card — light theme](images/meteogram-light.png)
+
+*The card follows your Home Assistant theme (dark and light shown above).*
 
 ## Features
 
-- 📊 Scrollable chart: temperature line, precipitation bars, wind speed + gusts
+- 📊 Scrollable chart: temperature line, precipitation bars, wind speed + gusts, wind-direction arrows
 - 🌍 Free MET Norway weather data (CC BY 4.0)
 - 🕐 Shows MET's full available range (~10 days): hourly for ~2 days, then 6-hourly
 - 📱 Mobile-friendly, respects Home Assistant themes
@@ -136,22 +140,40 @@ proxy_url: /met   # relative path = same-origin; avoids CORS/mixed-content
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `proxy_url` | string | — | **Required.** Base path of your MET proxy — use the relative `/met` (same-origin, recommended). The card appends `/weatherapi/locationforecast/2.0/complete?lat=…&lon=…`. An absolute `https://…/met` also works but is CORS/mixed-content prone. |
-| `latitude` | number | HA config latitude | Forecast location latitude |
-| `longitude` | number | HA config longitude | Forecast location longitude |
-| `days` | integer | full range | Optional cap (1–14) on days shown. Omit to show MET's full available range (~10 days). |
+| `latitude` | number | HA home latitude | Forecast location latitude |
+| `longitude` | number | HA home longitude | Forecast location longitude |
+| `days` | integer | full range | Optionally **trims** the forecast to the next N days. Omit to show MET's full range (~10 days) — that's MET's own forecast horizon, so there's no way to show more. |
+
+### Location
+
+By default the card uses your **Home Assistant home location** — the
+latitude/longitude configured under **Settings → System → General**. To show a
+different place, set `latitude` and `longitude` in the card config:
+
+```yaml
+type: custom:meteogram-card
+proxy_url: /met
+latitude: 59.9139     # e.g. Oslo
+longitude: 10.7522
+```
+
+Get coordinates from any maps tool (e.g. right-click a spot in Google Maps).
+The card re-fetches whenever you change these (and on its ~30-minute refresh),
+so you can put several cards on a dashboard pointed at different locations.
 
 ## What it renders
 
-- **Top pane**: temperature line + precipitation bars
-- **Bottom pane**: wind speed (solid) and gusts (dashed)
+- **Top pane**: temperature line + precipitation bars, with weather icons riding above the temperature line
+- **Bottom pane**: wind speed (solid) and gusts (dashed), with a row of wind-direction arrows beneath
 - **Day separators**: vertical lines at midnight
 - **Icon row**: weather icons from MET's `symbol_code`
 
 By default the card shows MET's **full available range** (~10 days): the
 resolution degrades the way MET's data does — hourly (`next_1_hours`) for the
 first ~2 days, then 6-hourly (`next_6_hours`) further out (wider precip bars and
-sparser icons reflect the coarser steps). Set `days` to cap how far ahead it
-goes.
+sparser icons reflect the coarser steps). That ~10 days is **MET's own forecast
+horizon** — MET doesn't publish further out, so there's no setting to show more;
+`days` only *trims* the far end.
 
 ## Troubleshooting
 
