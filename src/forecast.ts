@@ -1,98 +1,21 @@
-// Minimal typing of the MET Norway Locationforecast "complete" response —
-// only the fields the meteogram actually uses.
-// Full schema: https://api.met.no/weatherapi/locationforecast/2.0/documentation
+// Barrel for the forecast backend.
+//
+// The implementation moved into src/forecast/ (a pluggable provider registry —
+// see docs/pluggable-backend-plan.md). This file preserves the original
+// "./forecast" import path for existing consumers (the card, the web app, the
+// renderer) and hosts the web app's dev-proxy fetch. Note: `./forecast`
+// resolves to this file, not the folder's index.ts (files win over dirs).
 
-export interface MetInstantDetails {
-  air_temperature?: number;
-  wind_speed?: number;
-  wind_speed_of_gust?: number;
-  wind_from_direction?: number;
-  relative_humidity?: number;
-}
+import type { MetResponse } from "./forecast/met";
 
-export interface MetPrecipDetails {
-  precipitation_amount?: number;
-}
-
-export interface MetSummary {
-  symbol_code: string;
-}
-
-export interface MetTimeStep {
-  time: string;
-  data: {
-    instant: { details: MetInstantDetails };
-    next_1_hours?: { summary: MetSummary; details: MetPrecipDetails };
-    next_6_hours?: { summary: MetSummary; details: MetPrecipDetails };
-  };
-}
-
-export interface MetResponse {
-  properties: {
-    timeseries: MetTimeStep[];
-  };
-}
-
-// Normalized point the renderer works with, independent of which
-// resolution (hourly vs 6-hourly) the source step came from.
-export interface ForecastPoint {
-  time: Date;
-  stepHours: 1 | 6;
-  temperature: number | null;
-  precipitation: number | null;
-  windSpeed: number | null;
-  windGust: number | null;
-  /** Direction the wind blows FROM, in degrees (0 = north, 90 = east). */
-  windDirection: number | null;
-  symbol: string | null;
-}
+export * from "./forecast/index";
 
 /**
- * Flattens the MET Norway timeseries into a list of ForecastPoints.
- * Prefers next_1_hours (available for roughly the first 2-3 days) and
- * falls back to next_6_hours for the remainder of the requested range,
- * mirroring how yr.no's own meteogram degrades resolution over time.
+ * Web-app fetch: hits Vite's dev-server proxy (/api/forecast), which attaches
+ * MET's required User-Agent server-side, and returns the raw MET response.
+ * (The card fetches via its own proxy_url instead; the source-agnostic path is
+ * the registry's fetchForecastPoints.)
  */
-export function toForecastPoints(response: MetResponse, maxDays: number): ForecastPoint[] {
-  const cutoff = Date.now() + maxDays * 24 * 60 * 60 * 1000;
-  const points: ForecastPoint[] = [];
-
-  for (const step of response.properties.timeseries) {
-    const time = new Date(step.time);
-    if (time.getTime() > cutoff) break;
-
-    const instant = step.data.instant.details;
-    const hourly = step.data.next_1_hours;
-    const sixHourly = step.data.next_6_hours;
-
-    if (hourly) {
-      points.push({
-        time,
-        stepHours: 1,
-        temperature: instant.air_temperature ?? null,
-        precipitation: hourly.details.precipitation_amount ?? null,
-        windSpeed: instant.wind_speed ?? null,
-        windGust: instant.wind_speed_of_gust ?? null,
-        windDirection: instant.wind_from_direction ?? null,
-        symbol: hourly.summary.symbol_code,
-      });
-    } else if (sixHourly) {
-      points.push({
-        time,
-        stepHours: 6,
-        temperature: instant.air_temperature ?? null,
-        precipitation: sixHourly.details.precipitation_amount ?? null,
-        windSpeed: instant.wind_speed ?? null,
-        windGust: instant.wind_speed_of_gust ?? null,
-        windDirection: instant.wind_from_direction ?? null,
-        symbol: sixHourly.summary.symbol_code,
-      });
-    }
-  }
-
-  return points;
-}
-
 export async function fetchForecast(lat: number, lon: number): Promise<MetResponse> {
   const url = `/api/forecast?lat=${lat}&lon=${lon}`;
   const res = await fetch(url);
