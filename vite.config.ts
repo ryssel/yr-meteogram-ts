@@ -24,11 +24,14 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       proxy: {
-        "/api/forecast": {
+        // Maps the /met base to api.met.no's root — the same convention the HA
+        // card uses (proxy_url: /met) and that met.requestUrl() builds against,
+        // so both entry points share one code path. The client appends the
+        // /weatherapi/locationforecast/... path.
+        "/met": {
           target: "https://api.met.no",
           changeOrigin: true,
-          rewrite: (path) =>
-            path.replace(/^\/api\/forecast/, "/weatherapi/locationforecast/2.0/complete"),
+          rewrite: (path) => path.replace(/^\/met/, ""),
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq) => {
               proxyReq.setHeader("User-Agent", userAgent ?? "yr-meteogram-ts (missing MET_USER_AGENT)");

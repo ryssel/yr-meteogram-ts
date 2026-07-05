@@ -1,5 +1,5 @@
 import "./style.css";
-import { fetchForecast, toForecastPoints } from "./forecast";
+import { fetchForecastPoints, DEFAULT_SOURCE } from "./forecast";
 import { renderMeteogram } from "./meteogram";
 
 const form = document.querySelector<HTMLFormElement>("#location-form")!;
@@ -16,8 +16,9 @@ async function loadAndRender(): Promise<void> {
 
   chartContainer.innerHTML = `<p class="status">Loading forecast…</p>`;
   try {
-    const response = await fetchForecast(lat, lon);
-    const points = toForecastPoints(response, days);
+    // The web app fetches via the /met dev proxy (vite.config.ts), which adds
+    // MET's required User-Agent. Source selection (met | …) is Phase 5.
+    const points = await fetchForecastPoints(DEFAULT_SOURCE, "/met", lat, lon, days);
     renderMeteogram(chartContainer, points);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

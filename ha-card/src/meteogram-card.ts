@@ -2,7 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 
 // Reuse the main app's fetch/normalize logic and renderer — single source of
 // truth, no duplicated parsing here.
-import { toForecastPoints, type MetResponse } from "../../src/forecast";
+import { fetchForecastPoints, DEFAULT_SOURCE, type SourceId } from "../../src/forecast";
 import { renderMeteogram } from "../../src/meteogram";
 
 interface CardConfig {
@@ -10,6 +10,10 @@ interface CardConfig {
   latitude?: number;
   longitude?: number;
   days?: number;
+  // Which forecast source to use. Defaults to MET Norway; other providers are
+  // opt-in (see src/forecast/). Each source needs a proxy_url pointed at its
+  // matching proxy.
+  source?: SourceId;
   // Base URL of a proxy that forwards to api.met.no with the required
   // User-Agent header (browsers can't set it themselves). The card appends
   // the MET locationforecast path + lat/lon to this base. Example:
@@ -88,7 +92,7 @@ class MeteogramCard extends HTMLElement {
 
     const latitude = this._config.latitude ?? this._hass.config.latitude;
     const longitude = this._config.longitude ?? this._hass.config.longitude;
-    const key = `${latitude},${longitude},${this._config.days ?? ""},${this._config.proxy_url ?? ""}`;
+    const key = `${latitude},${longitude},${this._config.days ?? ""},${this._config.proxy_url ?? ""},${this._config.source ?? ""}`;
     if (key === this._lastKey) return;
     this._lastKey = key;
 
@@ -122,26 +126,15 @@ class MeteogramCard extends HTMLElement {
     // Token so a slow fetch that's been superseded (config change or refresh
     // overlap) doesn't clobber a newer render.
     const reqId = ++this._reqSeq;
+    const source = this._config?.source ?? DEFAULT_SOURCE;
 
     try {
-      // proxy_url is the base that maps to api.met.no; append the MET path.
-      const endpoint = `${proxyBase}/weatherapi/locationforecast/2.0/complete?lat=${latitude}&lon=${longitude}`;
-
-      const response = await fetch(endpoint);
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-      const data = (await response.json()) as MetResponse;
+      // fetchForecastPoints builds the chosen provider's request URL against
+      // proxyBase and normalizes the response. maxDays is the optional `days`
+      // cap; MET_MAX_DAYS means "no cap" (exceeds MET's horizon → everything).
+      const days = maxDays && maxDays > 0 ? maxDays : MET_MAX_DAYS;
+      const points = await fetchForecastPoints(source, proxyBase, latitude, longitude, days);
       if (reqId !== this._reqSeq) return; // a newer request started; drop this one
-
-      // Show everything MET returns — hourly for the first ~2 days, then
-      // 6-hourly further out. The available data determines the period.
-      let points = toForecastPoints(data, MET_MAX_DAYS);
-
-      // Optional cap on how far ahead to show.
-      if (maxDays && maxDays > 0) {
-        const cutoff = Date.now() + maxDays * 24 * 60 * 60 * 1000;
-        points = points.filter((p) => p.time.getTime() <= cutoff);
-      }
 
       // Preserve horizontal scroll across the re-render (e.g. periodic refresh).
       const prevScroll = this._container.querySelector<HTMLElement>(".meteogram-scroll")?.scrollLeft ?? 0;

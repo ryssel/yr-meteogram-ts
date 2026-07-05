@@ -25,7 +25,7 @@ It ships in **two forms from one codebase**:
   the app + a contact, or it returns 403. Browsers can't set a custom
   `User-Agent` from client-side JS, so requests must go through a proxy that
   attaches it server-side. Two proxies exist for the two forms:
-  - **Web app**: Vite's dev-server proxy (`vite.config.ts`, `/api/forecast`),
+  - **Web app**: Vite's dev-server proxy (`vite.config.ts`, `/met` → api.met.no),
     reading `MET_USER_AGENT` from `.env`.
   - **HACS card**: a *user-provided* proxy pointed at by the card's `proxy_url`
     config. Recommended is an NGINX Proxy Manager `location /met/` block that
@@ -61,7 +61,11 @@ DEVELOPMENT.md                 web-app getting-started, MET-proxy rationale, how
                                chart works, customizing, and card build/release steps
 index.html                    web-app entry point (location/days form + theme toggle)
 src/main.ts                    wires the form + dark-mode toggle, calls fetch + render
-src/forecast.ts                fetch (/api/forecast) + normalize MET JSON -> ForecastPoint[]
+src/forecast/                  pluggable forecast backend: types.ts (ForecastPoint +
+                               ForecastProvider), met.ts (MET provider), index.ts
+                               (PROVIDERS registry + fetchForecastPoints(source, proxyBase,
+                               lat, lon, maxDays)). MET is the default source; DMI etc. are
+                               opt-in — see docs/pluggable-backend-plan.md.
 src/meteogram.ts               renderMeteogram(container, points): void — builds the SVG(s)
                                and sets container.innerHTML. Hand-computed dynamic scales,
                                monotone-cubic smoothing, 6-hourly horizontal compression,
