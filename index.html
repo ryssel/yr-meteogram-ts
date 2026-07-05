@@ -35,6 +35,10 @@
               <option value="9">9</option>
             </select>
           </label>
+          <label>
+            Source
+            <select id="source"></select>
+          </label>
           <button type="submit">Load forecast</button>
           <button type="button" id="geolocate">Use my location</button>
         </form>
@@ -45,7 +49,10 @@
       <footer>
         <p>
           Data from
-          <a href="https://api.met.no/" target="_blank" rel="noreferrer">MET Norway</a>,
+          <a href="https://api.met.no/" target="_blank" rel="noreferrer">MET Norway</a>
+          or
+          <a href="https://dmi.dk/" target="_blank" rel="noreferrer">DMI</a>
+          via <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>,
           licensed under
           <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
         </p>

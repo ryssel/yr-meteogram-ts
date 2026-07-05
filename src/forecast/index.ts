@@ -7,14 +7,16 @@
 
 import type { ForecastPoint, ForecastProvider } from "./types";
 import { met } from "./met";
+import { dmi } from "./dmi";
 
 export type { ForecastPoint, ForecastProvider } from "./types";
 export * from "./met";
+export { dmi } from "./dmi";
 
-// Registered providers, keyed by their config id. DMI joins here in Phase 3;
-// declaring the object literal (rather than annotating it) keeps SourceId a
-// precise union of the actual keys.
-export const PROVIDERS = { met };
+// Registered providers, keyed by their config id. MET is the default; DMI (via
+// Open-Meteo) is an opt-in alternative. Declaring the object literal (rather
+// than annotating it) keeps SourceId a precise union of the actual keys.
+export const PROVIDERS = { met, dmi };
 
 export type SourceId = keyof typeof PROVIDERS;
 export const DEFAULT_SOURCE: SourceId = "met";
