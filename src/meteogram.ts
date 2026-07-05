@@ -34,7 +34,7 @@ const LAYOUT: Layout = {
   // times the number of ticks, so each pane is only as tall as its data needs.
   pxPerTempTick: 16,
   pxPerWindTick: 16,
-  precipBandHeight: 38,
+  precipBandHeight: 48, // = 2 precip ticks × pxPerTempTick (+ padding), so precip gridlines line up with temp/wind
   panePadTop: 8,
   panePadBottom: 6,
   arrowRowHeight: 22,
@@ -182,8 +182,12 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   const yTemp = (t: number) => tempBottom - ((t - minTemp) / (maxTemp - minTemp)) * (tempBottom - tempTop);
 
   // --- precipitation scale (bars grow up from the bottom of the temp pane) ---
+  // Two even intervals so the axis shows round 0 / step / 2·step labels at the
+  // same 16px gridline spacing as temp/wind; *1.35 keeps the tallest bar clear
+  // of the top (2·step always exceeds the data peak).
   const precipVals = points.map((p) => p.precipitation ?? 0);
-  const maxPrecip = Math.max(2, ...precipVals) * 1.35; // *1.35 = headroom above the tallest bar
+  const precipStep = niceStep(Math.max(2, ...precipVals) * 1.35, 2);
+  const maxPrecip = 2 * precipStep;
   const precipBase = headerHeight + tempPaneHeight - panePadBottom;
   const precipTop = tempBottom + 10;
   const yPrecip = (mm: number) => precipBase - (mm / maxPrecip) * (precipBase - precipTop);
@@ -306,21 +310,25 @@ export function renderMeteogram(container: HTMLElement, points: ForecastPoint[])
   for (let t = minTemp; t <= maxTemp; t += tempStep) {
     const y = yTemp(t).toFixed(1);
     gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #eee)" stroke-width="1" />`);
-    leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--temp)">${t}°</text>`);
+    // Right-align the number in the same column as the wind/precip numbers, and
+    // hang the degree symbol just to its right (its own aligned column).
+    leftLabels.push(
+      `<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--temp)">${t}</text>` +
+        `<text x="${marginLeft - 8}" y="${y}" text-anchor="start" dominant-baseline="middle" font-size="10" fill="var(--temp)">°</text>`
+    );
   }
   for (let w = 0; w <= maxWind; w += windStep) {
     const y = yWind(w).toFixed(1);
     gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #f2f2f2)" stroke-width="1" />`);
     leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--wind)">${w}</text>`);
   }
-  // Precip (mm) labels — frozen on the left. Label round tick values within the
-  // scale (0, step, 2·step…) instead of 0/half/max, which produced decimals like
-  // 1.4/2.7. Bars keep their scaling; only the label positions are rounded.
-  const precipStep = niceStep(maxPrecip, 4);
+  // Precip gridlines + labels: 0 / step / 2·step (round values), one gridline per
+  // tick like temp/wind, at matching 16px spacing (precipBandHeight sizes to it).
   const precipFmt = (v: number) => (precipStep % 1 === 0 ? String(v) : v.toFixed(1));
-  for (let i = 0; i * precipStep <= maxPrecip + 1e-9; i++) {
+  for (let i = 0; i <= 2; i++) {
     const mm = i * precipStep;
     const y = yPrecip(mm).toFixed(1);
+    gridLines.push(`<line x1="${marginLeft}" y1="${y}" x2="${width - marginRight}" y2="${y}" stroke="var(--divider-color, #f2f2f2)" stroke-width="1" />`);
     leftLabels.push(`<text x="${marginLeft - 8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="var(--precip)">${precipFmt(mm)}</text>`);
   }
 
