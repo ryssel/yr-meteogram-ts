@@ -1,8 +1,33 @@
 # Plan: pluggable forecast backend (user-selectable source)
 
-Status: **proposed** (not started). Author note: MET Norway stays the default and
+Status: **SHIPPED in v0.3.0** (2026-07-05). MET Norway stays the default and
 canonical source; other providers (starting with DMI) are **opt-in choices the
 user picks** — never a replacement.
+
+## What shipped (vs. this plan)
+
+- **Phase 1** — provider seam in `src/forecast/` (`types.ts`, `met.ts`,
+  `index.ts` + `fetchForecastPoints`). ✅
+- **Phase 2** — both entry points route through the registry; card `source?`;
+  Vite proxy `/api/forecast` → `/met`; barrel deleted. ✅
+- **Phase 3 (DMI)** — done, but via **Open-Meteo's `dmi_harmonie_arome_europe`
+  model** (`src/forecast/dmi.ts`), *not* the official DMI EDR API. Open-Meteo is
+  keyless + CORS-open, so **Phase 4 (DMI proxy/API key) was avoided entirely** —
+  no proxy, no secret. A `requiresProxy` flag on `ForecastProvider` lets the card
+  render DMI with no `proxy_url`. WMO `weather_code` → existing MET-style icons. ✅
+- **Phase 5** — web-app source `<select>` **and** a Lovelace **visual editor**
+  (`<meteogram-card-editor>`, plain-DOM, no `ha-form` dep). ✅
+- **Phase 6** — README/DEVELOPMENT/CLAUDE docs + `ha-card/dev.html` test harness;
+  released via `v0.3.0-beta.1/.2` → stable **`v0.3.0`**. ✅
+
+**Not done (deliberately):** the official DMI EDR API path (Open-Meteo covered
+the need), and a live in-card source toggle for HA (one source per card, set in
+config/editor — matches HA conventions). Both remain easy future additions given
+the registry design.
+
+The rest of this document is the original plan, kept for reference.
+
+---
 
 ## Goal
 
