@@ -83,6 +83,9 @@ ha-card/src/meteogram-card.ts  the custom element (Shadow DOM). Reuses src/forec
 ha-card/manifest.json          card metadata + version (bump this per release)
 ha-card/README.md              install (HACS + NGINX proxy), config, troubleshooting
 ha-card/images/*.png           light/dark screenshots used in the README
+ha-card/dev.html               dev-only harness: mounts <meteogram-card> with a stub
+                               hass (MET + DMI) at /ha-card/dev.html under `npm run dev`.
+                               Not shipped (excluded from vite build + card bundle).
 ha-card/dist/                  built bundle (git-ignored; produced by rollup / CI)
 rollup.config.js               builds ha-card/dist/meteogram-card.js (self-contained ESM)
 hacs.json                      HACS metadata (filename = meteogram-card.js, Dashboard)

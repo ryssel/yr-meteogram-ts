@@ -26,6 +26,13 @@ export interface ForecastProvider {
   readonly id: string;
   /** Human-readable name shown in source pickers. */
   readonly label: string;
+  /**
+   * Whether requestUrl needs a user-provided proxy base to inject auth (a
+   * User-Agent, API key, ...). Keyless, CORS-open sources set this false and
+   * are called directly (proxyBase is ignored) — so the card doesn't demand a
+   * proxy_url for them.
+   */
+  readonly requiresProxy: boolean;
   /** Build the request URL from a proxy base + coordinates. */
   requestUrl(proxyBase: string, lat: number, lon: number): string;
   /** Normalize the raw JSON response into renderer-ready points. */

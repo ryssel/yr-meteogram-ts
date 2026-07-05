@@ -2,7 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 
 // Reuse the main app's fetch/normalize logic and renderer — single source of
 // truth, no duplicated parsing here.
-import { fetchForecastPoints, DEFAULT_SOURCE, type SourceId } from "../../src/forecast";
+import { fetchForecastPoints, DEFAULT_SOURCE, PROVIDERS, type SourceId } from "../../src/forecast";
 import { renderMeteogram } from "../../src/meteogram";
 
 interface CardConfig {
@@ -112,13 +112,18 @@ class MeteogramCard extends HTMLElement {
   private async updateForecast(latitude: number, longitude: number, maxDays?: number) {
     if (!this._statusEl || !this._container) return;
 
-    const proxyBase = this._config?.proxy_url?.replace(/\/+$/, "");
-    if (!proxyBase) {
+    const source = this._config?.source ?? DEFAULT_SOURCE;
+    const provider = PROVIDERS[source] ?? PROVIDERS[DEFAULT_SOURCE];
+    const proxyBase = this._config?.proxy_url?.replace(/\/+$/, "") ?? "";
+
+    // Sources that inject auth (e.g. MET's User-Agent) need a proxy_url; keyless
+    // ones (e.g. DMI via Open-Meteo) are called directly, so don't demand it.
+    if (provider.requiresProxy && !proxyBase) {
       this._container.innerHTML = "";
       this._statusEl = document.createElement("p");
       this._statusEl.className = "status";
       this._statusEl.textContent =
-        "Configuration error: proxy_url is required (a proxy that adds MET's User-Agent header — see the card README).";
+        "Configuration error: proxy_url is required for this source (a proxy that adds MET's User-Agent header — see the card README).";
       this._container.appendChild(this._statusEl);
       return;
     }
@@ -126,7 +131,6 @@ class MeteogramCard extends HTMLElement {
     // Token so a slow fetch that's been superseded (config change or refresh
     // overlap) doesn't clobber a newer render.
     const reqId = ++this._reqSeq;
-    const source = this._config?.source ?? DEFAULT_SOURCE;
 
     try {
       // fetchForecastPoints builds the chosen provider's request URL against

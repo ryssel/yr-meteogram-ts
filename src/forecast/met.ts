@@ -86,6 +86,7 @@ export function toForecastPoints(response: MetResponse, maxDays: number): Foreca
 export const met: ForecastProvider = {
   id: "met",
   label: "MET Norway",
+  requiresProxy: true, // needs a proxy to inject MET's required User-Agent
   requestUrl(proxyBase, lat, lon) {
     // proxyBase maps to api.met.no; append the locationforecast path + coords.
     return `${proxyBase}/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}`;

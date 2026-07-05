@@ -71,6 +71,26 @@ truth for parsing and rendering — there's no duplicated chart code.
   MET's `symbol_code`. The mapping covers the common families; extend it there
   if you need MET's rarer codes.
 
+## Testing the card without Home Assistant
+
+`ha-card/dev.html` is a dev-only harness that mounts the real `<meteogram-card>`
+custom element with a stub `hass`, so you can iterate on card-specific code
+(config handling, sources, scroll, sizing) in seconds instead of round-tripping
+through Home Assistant. Run `npm run dev` and open:
+
+```
+http://localhost:5174/ha-card/dev.html   (port may vary)
+```
+
+It renders two cards — a MET card (`proxy_url: /met`) and a DMI card
+(`source: dmi`, no proxy) — using a minimal `hass` and hardcoded HA theme vars.
+The file is dev-server-only (not part of `vite build` or the card bundle) and
+never ships. Edit the `mount(...)` calls at the bottom to try other configs.
+
+Caveat: the stub `hass` and fake theme vars make this a good first-pass check,
+**not** a substitute for verifying in a real Home Assistant instance (actual
+theme integration, HA card sizing) before a release.
+
 ## Building & releasing the Home Assistant card
 
 ```bash

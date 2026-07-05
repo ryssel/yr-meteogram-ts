@@ -50,6 +50,7 @@ function wmoToSymbol(code: number | null | undefined, isDay: number | null | und
 export const dmi: ForecastProvider = {
   id: "dmi",
   label: "DMI (via Open-Meteo)",
+  requiresProxy: false, // Open-Meteo is keyless + CORS-open; called directly
   requestUrl(_proxyBase, lat, lon) {
     // proxyBase is ignored — Open-Meteo needs no proxy/key. Pull the genuine DMI
     // HARMONIE-AROME model; unixtime keeps timestamps in UTC (matching MET), and
