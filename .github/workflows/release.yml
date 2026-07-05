@@ -34,3 +34,6 @@ jobs:
           # The asset filename MUST match `filename` in hacs.json
           files: ha-card/dist/meteogram-card.js
           generate_release_notes: true
+          # Tags with a suffix (e.g. v0.3.0-beta.1, v0.3.0-rc.1) publish as
+          # pre-releases, so they only reach users who enabled betas in HACS.
+          prerelease: ${{ contains(github.ref_name, '-') }}
