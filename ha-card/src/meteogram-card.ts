@@ -37,6 +37,7 @@ class MeteogramCard extends HTMLElement {
   private _refreshTimer?: number;
   private _reqSeq = 0;
   private _cardHeight?: number;
+  private _dark?: boolean;
 
   constructor() {
     super();
@@ -64,6 +65,16 @@ class MeteogramCard extends HTMLElement {
 
   set hass(hass: HomeAssistant) {
     this._hass = hass;
+    // Follow HA's light/dark theme for the data-series colors (structural
+    // colors already come from HA theme vars). hass.themes.darkMode flips with
+    // the active HA theme; toggling [data-dark] re-resolves the CSS vars live,
+    // so the already-rendered SVG recolors without a rebuild.
+    // `darkMode` isn't in custom-card-helpers' Themes type, but HA sets it.
+    const dark = !!(hass?.themes as { darkMode?: boolean } | undefined)?.darkMode;
+    if (dark !== this._dark) {
+      this._dark = dark;
+      this.toggleAttribute("data-dark", dark);
+    }
     // maybeLoad() no-ops unless the location/config actually changed, so the
     // frequent hass updates don't rebuild the chart and reset the scroll.
     this.maybeLoad();
@@ -168,6 +179,15 @@ class MeteogramCard extends HTMLElement {
         --precip: #3d8bd4;
         --wind: #8e44ad;
         display: block;
+      }
+
+      /* Brighter data-series colors for dark themes, so the thin axis-value
+         labels (and lines) stay legible on a dark card. Toggled via [data-dark]
+         from hass.themes.darkMode; structural colors already follow HA vars. */
+      :host([data-dark]) {
+        --temp: #ff6b6b;
+        --precip: #5aa9e6;
+        --wind: #c08ae0;
       }
 
       .meteogram-container {

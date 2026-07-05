@@ -36,8 +36,10 @@
       // Registers <meteogram-card> and <meteogram-card-editor>.
       import "/ha-card/src/meteogram-card.ts";
 
-      // Minimal HomeAssistant stub — the card only reads hass.config.lat/lon.
-      const hass = { config: { latitude: 55.7681, longitude: 12.5049 } };
+      // Minimal HomeAssistant stub — the card reads hass.config.lat/lon and
+      // hass.themes.darkMode (darkMode:true here matches the dark harness bg, so
+      // the data-series colors use their dark variants).
+      const hass = { config: { latitude: 55.7681, longitude: 12.5049 }, themes: { darkMode: true } };
 
       function mount(id, config) {
         const el = document.createElement("meteogram-card");

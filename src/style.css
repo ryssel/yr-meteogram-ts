@@ -31,6 +31,9 @@
     --line: #2b2f39;
     --muted: #9aa0ab;
     --accent: #4f93d6;
+    --temp: #ff6b6b;
+    --precip: #5aa9e6;
+    --wind: #c08ae0;
     --divider-color: rgba(255, 255, 255, 0.14);
     --scrollbar-thumb-color: #565b66;
   }
@@ -43,6 +46,9 @@
   --line: #2b2f39;
   --muted: #9aa0ab;
   --accent: #4f93d6;
+  --temp: #ff6b6b;
+  --precip: #5aa9e6;
+  --wind: #c08ae0;
   --divider-color: rgba(255, 255, 255, 0.14);
   --scrollbar-thumb-color: #565b66;
 }
